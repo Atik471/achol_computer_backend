@@ -1,30 +1,7 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose"; 
 const { Schema } = mongoose;
 
-const subcategorySchema = new Schema({
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    unique: true
-  },
-  slug: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true
-  },
-  description: String,
-  image: String,
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+
 
 const categorySchema = new Schema({
   name: {
@@ -40,10 +17,14 @@ const categorySchema = new Schema({
     unique: true,
     lowercase: true
   },
+  
   description: String,
   image: String,
   icon: String,
-  subcategories: [subcategorySchema],
+  subcategories: [{
+    type: Schema.Types.ObjectId,
+    ref: "Subcategory"
+  }],
   isActive: {
     type: Boolean,
     default: true
@@ -64,22 +45,38 @@ const categorySchema = new Schema({
   }
 });
 
-// Auto-generate slugs before saving
+// validate slug for category
+categorySchema.pre('validate', function(next) {
+  if (!this.slug && this.name) {
+    this.slug = this.name
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\-]+/g, '')
+      .replace(/\-\-+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  }
+  next();
+});
+
+
+
+// Improved slug generation middleware
 categorySchema.pre('save', function(next) {
-  if (!this.slug) {
-    this.slug = this.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+  if (!this.slug && this.name) {
+    this.slug = this.name
+      .toLowerCase()
+      .replace(/\s+/g, '-')       // Replace spaces with -
+      .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
+      .replace(/\-\-+/g, '-')     // Replace multiple - with single -
+      .replace(/^-+/, '')         // Trim - from start of text
+      .replace(/-+$/, '');        // Trim - from end of text
   }
   this.updatedAt = new Date();
   next();
 });
 
-// Auto-generate slugs for subcategories
-subcategorySchema.pre('save', function(next) {
-  if (!this.slug) {
-    this.slug = this.name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
-  }
-  next();
-});
+
 
 // Prevent category deletion if products exist
 categorySchema.pre('remove', async function(next) {
@@ -92,21 +89,24 @@ categorySchema.pre('remove', async function(next) {
   next();
 });
 
-// Prevent subcategory deletion if products exist
-subcategorySchema.pre('remove', async function(next) {
-  const Product = mongoose.model('Product');
-  const productsExist = await Product.exists({ subcategory: this._id });
-  
-  if (productsExist) {
-    throw new Error('Cannot delete subcategory with associated products');
+
+
+// Cascade delete subcategories when a category is deleted
+categorySchema.pre('findOneAndDelete', async function(next) {
+  const category = await this.model.findOne(this.getQuery());
+  if (category && category.subcategories && category.subcategories.length > 0) {
+    const Subcategory = mongoose.model('Subcategory');
+    await Subcategory.deleteMany({ _id: { $in: category.subcategories } });
   }
   next();
 });
 
-// Indexes for better performance
-categorySchema.index({ name: 1, slug: 1, isActive: 1 });
-subcategorySchema.index({ name: 1, slug: 1 });
+// index definitions:
+// categorySchema.index({ name: 1, slug: 1, isActive: 1 });
+
+// Regular index for slug
+// subcategorySchema.index({ name: 1 }, { unique: true, sparse: true });
 
 const Category = mongoose.model('Category', categorySchema);
 
-module.exports = Category;
+export default Category;

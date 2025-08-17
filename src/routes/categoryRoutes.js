@@ -7,7 +7,7 @@ import {
   deleteCategory,
   deleteSubcategory,
   getCategories
-} from '../controllers/categoryController';
+} from '../controllers/categoryController.js';
 
 // GET /api/categories - Get all categories with subcategories
 router.get('/', getCategories);

@@ -1,11 +1,18 @@
-import Category from '../models/Category';
-import ErrorResponse from '../utils/errorResponse';
+import Category from '../models/Category.js';
+import Subcategory from '../models/Subcategory.js';
+import ErrorResponse from '../utils/errorResponse.js';
 
 // @desc    Create new category
 // @route   POST /api/categories
 export const createCategory = async (req, res, next) => {
   try {
     const { name, description, image, icon, metaTitle, metaDescription } = req.body;
+
+    // Check if category already exists
+    const existingCategory = await Category.findOne({ name });
+    if (existingCategory) {
+      return next(new ErrorResponse(`Category '${name}' already exists`, 400));
+    }
     
     const category = await Category.create({
       name,
@@ -25,7 +32,7 @@ export const createCategory = async (req, res, next) => {
   }
 };
 
-// @desc    Add subcategory to category
+// @desc    Add subcategory to category (now creates a separate Subcategory doc)
 // @route   POST /api/categories/:categoryId/subcategories
 export const addSubcategory = async (req, res, next) => {
   try {
@@ -36,17 +43,31 @@ export const addSubcategory = async (req, res, next) => {
       return next(new ErrorResponse('Category not found', 404));
     }
 
-    category.subcategories.push({
+    
+    // Generate preliminary slug
+    const baseSlug = name.toLowerCase().replace(/\s+/g, '-');
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Check for existing slugs
+    // while (await Subcategory.exists({ slug }).session(session)) {
+    //   slug = `${baseSlug}-${counter}`;
+    //   counter++;
+    // }
+    const subcategory = await Subcategory.create({
       name,
       description,
-      image
+      image,
+      category: category._id
     });
 
+    // Add subcategory ref to category
+    category.subcategories.push(subcategory._id);
     await category.save();
 
     res.status(201).json({
       success: true,
-      data: category
+      data: subcategory
     });
   } catch (err) {
     next(err);
@@ -57,14 +78,20 @@ export const addSubcategory = async (req, res, next) => {
 // @route   DELETE /api/categories/:id
 export const deleteCategory = async (req, res, next) => {
   try {
+    // Find the category
     const category = await Category.findById(req.params.id);
-
     if (!category) {
       return next(new ErrorResponse('Category not found', 404));
     }
 
-    await category.remove();
-    
+    // Find and delete all subcategories for this category
+    if (category.subcategories && category.subcategories.length > 0) {
+      await Subcategory.deleteMany({ _id: { $in: category.subcategories } });
+    }
+
+    // Delete the category
+    await Category.deleteOne({ _id: req.params.id });
+
     res.json({
       success: true,
       data: {}
@@ -74,41 +101,46 @@ export const deleteCategory = async (req, res, next) => {
   }
 };
 
-// @desc    Delete subcategory
+// @desc    Delete subcategory (removes Subcategory doc and ref from Category)
 // @route   DELETE /api/categories/:categoryId/subcategories/:subcategoryId
 export const deleteSubcategory = async (req, res, next) => {
   try {
     const category = await Category.findById(req.params.categoryId);
-
     if (!category) {
       return next(new ErrorResponse('Category not found', 404));
     }
 
-    const subcategory = category.subcategories.id(req.params.subcategoryId);
-    
+    // Remove subcategory ref from category
+    category.subcategories = category.subcategories.filter(
+      subId => subId.toString() !== req.params.subcategoryId
+    );
+    await category.save();
+
+    // Remove the subcategory document
+    const subcategory = await Subcategory.findById(req.params.subcategoryId);
     if (!subcategory) {
       return next(new ErrorResponse('Subcategory not found', 404));
     }
-
-    await subcategory.remove();
-    await category.save();
+    // Use findByIdAndDelete instead of remove()
+    await Subcategory.findByIdAndDelete(req.params.subcategoryId);
 
     res.json({
       success: true,
-      data: category
+      data: {}
     });
   } catch (err) {
     next(err);
   }
 };
 
-// @desc    Get all categories with subcategories
+// @desc    Get all categories with subcategories (populated)
 // @route   GET /api/categories
 export const getCategories = async (req, res, next) => {
   try {
     const categories = await Category.find({})
-      .select('-__v') // Exclude version key
-      .sort({ name: 1 }); // Sort alphabetically by name
+      .populate('subcategories')
+      .select('-__v')
+      .sort({ name: 1 });
 
     res.status(200).json({
       success: true,
