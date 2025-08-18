@@ -5,6 +5,7 @@ import connectDB from './config/db.js';
 import categoryRouter from './routes/categoryRoutes.js';
 import authRouter from './routes/authRoutes.js';
 import adminProductRouter from './routes/adminProductRoutes.js';
+import productRouter from './routes/productRoutes.js';
 
 // Connect to database
 connectDB();
@@ -18,5 +19,6 @@ app.use(cookieParser());
 app.use('/api/categories', categoryRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin/products', adminProductRouter);
+app.use('/api/products', productRouter);
 
 export default app;
