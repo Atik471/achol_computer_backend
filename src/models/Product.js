@@ -116,7 +116,7 @@ productSchema.pre("save", function (next) {
 // Indexes for better performance
 productSchema.index({ name: "text", description: "text" });
 productSchema.index({ category: 1, subcategory: 1 });
-productSchema.index({ slug: 1 }, { unique: true });
+// productSchema.index({ slug: 1 }, { unique: true });
 productSchema.index({ price: 1 });
 productSchema.index({ ratings: -1 });
 
