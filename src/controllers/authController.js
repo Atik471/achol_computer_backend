@@ -60,16 +60,20 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 // @route   GET /api/auth/logout
 // @access  Private
 export const logoutUser = asyncHandler(async (req, res) => {
-    res.cookie('token', 'none', {
-        expires: new Date(Date.now() + 10 * 1000), // 10 seconds
-        httpOnly: true
-    });
+  const user = await User.findById(req.user.id);
+  if (user) {
+    user.refreshToken = undefined;
+    await user.save({ validateBeforeSave: false });
+  }
 
-    res.status(200).json({
-        success: true,
-        data: {}
-    });
+  res.clearCookie("refreshToken");
+
+  res.status(200).json({
+    success: true,
+    data: {}
+  });
 });
+
 
 // @desc    Forgot password
 // @route   POST /api/auth/forgotpassword
@@ -140,21 +144,70 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 
 // Helper: Get token from model, create cookie and send response
 const sendTokenResponse = (user, statusCode, res) => {
-    const token = user.generateAuthToken();
+  const accessToken = user.generateAccessToken();
+  const refreshToken = user.generateRefreshToken();
 
-    const options = {
-        expires: new Date(
-            Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
-        ),
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production'
-    };
+  // Store refresh token in DB for this user (so you can verify later)
+  user.refreshToken = refreshToken;
+  user.save({ validateBeforeSave: false });
 
-    res
-        .status(statusCode)
-        .cookie('token', token, options)
-        .json({
-            success: true,
-            token
-        });
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+  };
+
+  res
+    .status(statusCode)
+    .cookie("refreshToken", refreshToken, cookieOptions)
+    .json({
+      success: true,
+      accessToken
+    });
 };
+
+// @desc    Refresh access token
+// @route   POST /api/auth/refresh
+// @access  Public (but requires refresh token cookie)
+export const refreshAccessToken = asyncHandler(async (req, res, next) => {
+  const { refreshToken } = req.cookies;
+
+  if (!refreshToken) {
+    return next(new ErrorResponse("No refresh token provided", 401));
+  }
+
+  try {
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    // Find user and check if refresh token matches DB
+    const user = await User.findById(decoded.id);
+    if (!user || user.refreshToken !== refreshToken) {
+      return next(new ErrorResponse("Invalid refresh token", 401));
+    }
+
+    // Generate new access token
+    const newAccessToken = user.generateAccessToken();
+
+    res.status(200).json({
+      success: true,
+      accessToken: newAccessToken
+    });
+  } catch (err) {
+    return next(new ErrorResponse("Invalid refresh token", 401));
+  }
+});
+
+
+// @desc    Get current logged in user
+// @route   GET /api/auth/me
+// @access  Private
+export const getMe = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  
+  res.status(200).json({
+    success: true,
+    data: user
+  });
+});

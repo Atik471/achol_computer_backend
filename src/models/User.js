@@ -51,6 +51,9 @@ const userSchema = new mongoose.Schema(
             type: String,
             maxlength: [20, "Phone number cannot exceed 20 characters"],
         },
+        refreshToken: {
+            type: String,
+        }
     },
     { timestamps: true }
 );
@@ -62,11 +65,20 @@ userSchema.pre("save", async function (next) {
     next();
 });
 
-// **Generate JWT Token**
-userSchema.methods.generateAuthToken = function () {
-    return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRE,
-    });
+userSchema.methods.generateAccessToken = function () {
+    return jwt.sign(
+        { id: this._id },
+        process.env.JWT_ACCESS_SECRET, // stronger secret just for access
+        { expiresIn: "15m" } // short-lived
+    );
+};
+
+userSchema.methods.generateRefreshToken = function () {
+    return jwt.sign(
+        { id: this._id },
+        process.env.JWT_REFRESH_SECRET, // separate secret
+        { expiresIn: "7d" } // long-lived
+    );
 };
 
 // **Compare passwords**
