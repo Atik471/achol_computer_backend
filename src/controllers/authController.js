@@ -3,6 +3,7 @@ import ErrorResponse from '../utils/errorResponse.js';
 import asyncHandler from '../middlewares/asyncHandler.js';
 import crypto from 'crypto';
 import sendEmail from '../utils/sendEmail.js';
+import jwt from 'jsonwebtoken';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -163,6 +164,7 @@ const sendTokenResponse = (user, statusCode, res) => {
     .cookie("refreshToken", refreshToken, cookieOptions)
     .json({
       success: true,
+      user: user,
       accessToken
     });
 };
@@ -170,34 +172,37 @@ const sendTokenResponse = (user, statusCode, res) => {
 // @desc    Refresh access token
 // @route   POST /api/auth/refresh
 // @access  Public (but requires refresh token cookie)
-export const refreshAccessToken = asyncHandler(async (req, res, next) => {
-  const { refreshToken } = req.cookies;
-
-  if (!refreshToken) {
-    return next(new ErrorResponse("No refresh token provided", 401));
-  }
-
+export const refreshAccessToken = async (req, res, next) => {
   try {
+    const refreshToken = req.cookies.refreshToken; // cookie theke refresh token
+    if (!refreshToken) {
+      return next(new ErrorResponse("Not authorized, no refresh token", 401));
+    }
+
     // Verify refresh token
     const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
 
-    // Find user and check if refresh token matches DB
-    const user = await User.findById(decoded.id);
-    if (!user || user.refreshToken !== refreshToken) {
-      return next(new ErrorResponse("Invalid refresh token", 401));
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) {
+      return next(new ErrorResponse("User no longer exists", 401));
     }
 
-    // Generate new access token
-    const newAccessToken = user.generateAccessToken();
+    // Issue new access token
+    const newAccessToken = jwt.sign(
+      { id: user._id },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: "15s" } // new short-lived access token
+    );
 
-    res.status(200).json({
-      success: true,
-      accessToken: newAccessToken
-    });
+    return res.json({ accessToken: newAccessToken });
   } catch (err) {
+    // Refresh token expired or invalid
+    if (err.name === "TokenExpiredError") {
+      return next(new ErrorResponse("Refresh token expired, please login again", 403));
+    }
     return next(new ErrorResponse("Invalid refresh token", 401));
   }
-});
+};
 
 
 // @desc    Get current logged in user
@@ -208,6 +213,6 @@ export const getMe = asyncHandler(async (req, res) => {
   
   res.status(200).json({
     success: true,
-    data: user
+    user: user
   });
 });

@@ -69,7 +69,7 @@ userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         { id: this._id },
         process.env.JWT_ACCESS_SECRET, // stronger secret just for access
-        { expiresIn: "15m" } // short-lived
+        { expiresIn: "15s" } // short-lived
     );
 };
 
@@ -77,7 +77,7 @@ userSchema.methods.generateRefreshToken = function () {
     return jwt.sign(
         { id: this._id },
         process.env.JWT_REFRESH_SECRET, // separate secret
-        { expiresIn: "7d" } // long-lived
+        { expiresIn: "30d" } // long-lived
     );
 };
 
