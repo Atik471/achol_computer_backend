@@ -6,25 +6,25 @@ import asyncHandler from '../middlewares/asyncHandler.js';
 // @route   GET /api/products
 // @access  Public
 export const getProducts = asyncHandler(async (req, res) => {
-    // 1. Filtering
+    // Filtering
     const queryObj = { ...req.query };
     const excludedFields = ['page', 'sort', 'limit', 'fields'];
     excludedFields.forEach(el => delete queryObj[el]);
 
-    // 2. Advanced filtering (gte, lte, etc)
+    // Advanced filtering (gte, lte, etc)
     let queryStr = JSON.stringify(queryObj);
     queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, match => `$${match}`);
 
     let query = Product.find(JSON.parse(queryStr)).populate('category subcategory');
 
-    // 3. Search
+    // Search
     if (req.query.search) {
         query = query.find({
             $text: { $search: req.query.search }
         });
     }
 
-    // 4. Sorting
+    // Sorting
     if (req.query.sort) {
         const sortBy = req.query.sort.split(',').join(' ');
         query = query.sort(sortBy);
@@ -32,7 +32,7 @@ export const getProducts = asyncHandler(async (req, res) => {
         query = query.sort('-createdAt');
     }
 
-    // 5. Pagination
+    // Pagination
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;

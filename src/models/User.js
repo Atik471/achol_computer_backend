@@ -51,6 +51,13 @@ const userSchema = new mongoose.Schema(
             type: String,
             maxlength: [20, "Phone number cannot exceed 20 characters"],
         },
+        sku: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
+            uppercase: true,
+        },
         refreshToken: {
             type: String,
         }
@@ -69,7 +76,7 @@ userSchema.methods.generateAccessToken = function () {
     return jwt.sign(
         { id: this._id },
         process.env.JWT_ACCESS_SECRET, // stronger secret just for access
-        { expiresIn: "15s" } // short-lived
+        { expiresIn: "15m" } // short-lived
     );
 };
 

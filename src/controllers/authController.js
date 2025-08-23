@@ -191,7 +191,7 @@ export const refreshAccessToken = async (req, res, next) => {
     const newAccessToken = jwt.sign(
       { id: user._id },
       process.env.JWT_ACCESS_SECRET,
-      { expiresIn: "15s" } // new short-lived access token
+      { expiresIn: "15m" } // new short-lived access token
     );
 
     return res.json({ accessToken: newAccessToken });

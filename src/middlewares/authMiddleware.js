@@ -11,7 +11,7 @@ export const protect = async (req, res, next) => {
   }
 
   if (!token) {
-    return next(new ErrorResponse("Not authorized, no token provided", 401));
+    return next(new ErrorResponse("Not authorized, no access token provided", 401));
   }
 
   try {
@@ -43,5 +43,5 @@ export const admin = (req, res, next) => {
   next();
 };
 
-// 3. Combined protect + admin middleware (for admin-only routes)
+// Combined protect + admin middleware (for admin-only routes)
 export const adminProtect = [protect, admin];
