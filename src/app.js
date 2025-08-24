@@ -17,11 +17,20 @@ const app = express();
 app.use(helmet()); 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://achol-computer-frontend.onrender.com/'
+  'https://achol-computer-frontend.onrender.com'
 ];
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS not allowed'));
+    }
+  },
   credentials: true,
   exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
