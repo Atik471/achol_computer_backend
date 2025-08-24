@@ -12,35 +12,51 @@ export const createProduct = asyncHandler(async (req, res) => {
   const {
     name,
     description,
+    broadDescription,
     price,
+    discountPrice,
+    buyingPrice,
     category,
     subcategory,
+    brand,
     stock,
     specifications,
-    discountPrice
+    keyFeatures,
+    colors,
   } = req.body;
 
   // Validate category and subcategory relationship
-  const subcat = await mongoose.model('Subcategory').findById(subcategory);
+  const subcat = await mongoose.model("Subcategory").findById(subcategory);
   if (!subcat || subcat.category.toString() !== category) {
-    throw new ErrorResponse('Subcategory does not belong to this category', 400);
+    throw new ErrorResponse("Subcategory does not belong to this category", 400);
   }
 
   const product = await Product.create({
     name,
     description,
-    price,
+    broadDescription: broadDescription || "",
+    price: price || null, // could be a number or TBA (null or string)
+    discountPrice: discountPrice || null,
+    buyingPrice: buyingPrice || null,
     category,
     subcategory,
-    stock: stock || 0,
+    brand,
     specifications: specifications || {},
-    discountPrice,
-    images: req.files?.map(file => file.path) || []
+    keyFeatures: keyFeatures || [],
+    colors: colors || [],
+    stock: {
+      inStock: stock?.inStock || 0,
+      defective: stock?.defective || 0,
+      servicing: stock?.servicing || 0,
+      sold: stock?.sold || 0,
+      incoming: stock?.incoming || 0,
+    },
+    images: req.body.images || req.files?.map(file => file.path) || [],
   });
 
   res.status(201).json({
     success: true,
-    data: product
+    data: product,
   });
 });
 

@@ -18,29 +18,46 @@ const productSchema = new Schema({
         type: String,
         required: [true, "Product description is required"]
     },
+    detailedDescription: {
+        type: String, // for broad, rich description
+    },
     price: {
-        type: Number,
+        type: Schema.Types.Mixed, // can be Number or String (e.g., "TBA")
         required: [true, "Product price is required"],
-        min: [0, "Price must be at least 0"]
+        validate: {
+            validator: function (value) {
+                return (
+                    typeof value === "number" ||
+                    (typeof value === "string" && value.toLowerCase() === "tba")
+                );
+            },
+            message: "Price must be a number or 'TBA'"
+        }
     },
     discountPrice: {
         type: Number,
         validate: {
             validator: function (value) {
-                return value < this.price;
+                return typeof this.price === "number" && value < this.price;
             },
             message: "Discount price must be less than regular price"
         }
     },
-    images: [{
-        type: String,
-        required: [true, "At least one image is required"]
+    buyingPrice: {
+        type: Number,
+        required: [true, "Buying price is required"],
+        min: [0, "Buying price cannot be negative"]
+    },
+    images: [String],
+    colors: [{
+        type: String // e.g., "Red", "Blue", "Black"
     }],
     stock: {
-        type: Number,
-        required: true,
-        min: [0, "Stock cannot be negative"],
-        default: 0
+        available: { type: Number, default: 0, min: 0 },  // in stock
+        defective: { type: Number, default: 0, min: 0 },  // faulty items
+        servicing: { type: Number, default: 0, min: 0 },  // sent to servicing
+        sold: { type: Number, default: 0, min: 0 },       // already sold
+        incoming: { type: Number, default: 0, min: 0 }    // ordered, not yet received
     },
     category: {
         type: Schema.Types.ObjectId,
@@ -59,10 +76,19 @@ const productSchema = new Schema({
             message: "Subcategory must belong to the selected category"
         }
     },
-    specifications: {
-        type: Map,
-        of: String
+    brand: {
+        type: String,
+        required: true
     },
+    specifications: [
+        {
+            key: { type: String, required: true },
+            value: { type: mongoose.Schema.Types.Mixed, required: true }
+        }
+    ],
+    keyFeatures: [{
+        type: String // e.g., "Fast charging", "Waterproof", etc.
+    }],
     ratings: {
         average: {
             type: Number,
@@ -114,12 +140,8 @@ productSchema.pre("save", function (next) {
 });
 
 // Indexes for better performance
-productSchema.index({ name: "text", description: "text" });
+productSchema.index({ name: "text", description: "text", broadDescription: "text" });
 productSchema.index({ category: 1, subcategory: 1 });
-// productSchema.index({ slug: 1 }, { unique: true });
-productSchema.index({ price: 1 });
-productSchema.index({ ratings: -1 });
 
-const Product = mongoose.model("Product", productSchema);
 
-export default Product;
+export default mongoose.model("Product", productSchema);
