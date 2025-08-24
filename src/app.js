@@ -14,7 +14,6 @@ connectDB();
 
 const app = express();
 
-app.use(helmet()); 
 const allowedOrigins = [
   'http://localhost:5173',
   'https://achol-computer-frontend.onrender.com'
@@ -22,18 +21,25 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like Postman)
-    if (!origin) return callback(null, true);
-
+    if (!origin) return callback(null, true); // allow Postman / server-to-server requests
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
+      return callback(null, true);
     } else {
-      callback(new Error('CORS not allowed'));
+      return callback(new Error('CORS not allowed'));
     }
   },
   credentials: true,
   exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+}));
+
+// Add this to handle preflight OPTIONS requests
+app.options('*', cors({
+  origin: allowedOrigins,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
