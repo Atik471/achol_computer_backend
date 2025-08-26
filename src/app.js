@@ -16,7 +16,9 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:5173',
-  'https://achol-computer-frontend.onrender.com'
+  'https://achol-computer-frontend.onrender.com',
+  'https://acholcomputer.com',
+  'https://www.acholcomputer.com'
 ];
 
 app.use(cors({
