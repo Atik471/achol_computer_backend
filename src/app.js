@@ -40,7 +40,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Preflight (OPTIONS) for all routes
-app.options("/*/", cors(corsOptions));
+app.options("/.*/", cors(corsOptions));
 
 
 app.use(express.json({ limit: '50mb' }));
