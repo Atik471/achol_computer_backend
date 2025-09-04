@@ -16,7 +16,7 @@ const app = express();
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://achol-computer-frontend.onrender.com",
+  "/\.onrender\.com$/",
   "https://acholcomputer.com",
   "https://www.acholcomputer.com",
 ];
