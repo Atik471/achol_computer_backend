@@ -14,42 +14,36 @@ connectDB();
 
 const app = express();
 
+import cors from "cors";
+
 const allowedOrigins = [
-  'http://localhost:5173',
-  'https://achol-computer-frontend.onrender.com',
-  'https://acholcomputer.com',
-  'https://www.acholcomputer.com'
+  "http://localhost:5173",
+  "https://achol-computer-frontend.onrender.com",
+  "https://acholcomputer.com",
+  "https://www.acholcomputer.com",
 ];
 
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true); // allow Postman / server-to-server requests
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow Postman / server-to-server
     if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
+      callback(null, true);
     } else {
-      return callback(new Error('CORS not allowed'));
+      callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
-  exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-}));
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Authorization", "X-Access-Token", "X-Refresh-Token"],
+};
 
-// Add this to handle preflight OPTIONS requests
-app.options(/.*/, cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    } else {
-      return callback(new Error('CORS not allowed'));
-    }
-  },
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-}));
+// Apply CORS to all routes (including OPTIONS automatically)
+app.use(cors(corsOptions));
+
+// Explicitly handle preflight
+app.options("*", cors(corsOptions));
+
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));  
