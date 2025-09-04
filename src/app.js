@@ -36,11 +36,12 @@ const corsOptions = {
   exposedHeaders: ["Authorization", "X-Access-Token", "X-Refresh-Token"],
 };
 
-// Apply CORS to all routes (including OPTIONS automatically)
+// Apply CORS globally
 app.use(cors(corsOptions));
 
-// Explicitly handle preflight
-app.options("*", cors(corsOptions));
+// Preflight (OPTIONS) for all routes
+app.options("/*/", cors(corsOptions));
+
 
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
