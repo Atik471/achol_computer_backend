@@ -8,7 +8,6 @@ import {
     getMe,
     refreshAccessToken
 } from '../controllers/authController.js';
-import {  } from '../controllers/authController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();

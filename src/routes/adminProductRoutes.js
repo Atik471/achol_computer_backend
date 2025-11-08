@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   createProduct,
+  getProducts,
   updateProduct,
   deleteProduct,
   updateProductStock,
@@ -18,6 +19,7 @@ const router = express.Router();
 //   .post(adminProtect, upload.array('images', 5), createProduct);
 
 router.route('/')
+  .get(adminProtect, getProducts)
   .post(adminProtect, createProduct);
 
 router.route('/:id')

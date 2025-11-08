@@ -8,11 +8,73 @@ import asyncHandler from '../middlewares/asyncHandler.js';
  * @route   POST /api/admin/products
  * @access  Private/Admin
  */
+export const getProducts = asyncHandler(async (req, res) => {
+  const { search, category, subcategory, brand, inStock, featured, sort } = req.query;
+
+  const page = Number(req.query.page) || 1;
+  const limit = Number(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
+
+  // Build query
+  const query = {};
+
+  if (search) {
+    query.name = { $regex: search, $options: 'i' };
+  }
+  if (category) {
+    query.category = category;
+  }
+  if (subcategory) {
+    query.subcategory = subcategory;
+  }
+  if (brand) {
+    query.brand = brand;
+  }
+  if (inStock) {
+    query['stock.inStock'] = { $gt: 0 };
+  }
+  if (featured) {
+    query.featured = featured === 'true';
+  }
+
+  const products = await Product.find(query)
+    .populate('category', 'name')
+    .populate('subcategory', 'name')
+    .populate('brand', 'name')
+    .sort(sort || '-createdAt')
+    .skip(skip)
+    .limit(limit);
+
+  const totalProducts = await Product.countDocuments(query);
+  const totalPages = Math.ceil(totalProducts / limit);
+
+  res.status(200).json({
+    success: true,
+    count: products.length,
+    data: products,
+    pagination: {
+      total: totalProducts,
+      totalPages,
+      currentPage: page,
+      limit,
+    },
+  });
+});
+
+
+/**
+ * @desc    Create new product
+ * @route   POST /api/admin/products
+ * @access  Private/Admin
+ */
 export const createProduct = asyncHandler(async (req, res) => {
+  console.log('Received product creation request with body:');
+  console.log(JSON.stringify(req.body, null, 2));
+
   const {
     name,
     description,
-    broadDescription,
+    detailedDescription,
     price,
     discountPrice,
     buyingPrice,
@@ -23,6 +85,8 @@ export const createProduct = asyncHandler(async (req, res) => {
     specifications,
     keyFeatures,
     colors,
+    featured,
+    isActive,
   } = req.body;
 
   // Validate category and subcategory relationship
@@ -31,27 +95,34 @@ export const createProduct = asyncHandler(async (req, res) => {
     throw new ErrorResponse("Subcategory does not belong to this category", 400);
   }
 
+  // Handle empty strings from form data and convert to numbers or undefined
+  const priceValue = price === 'TBA' ? 'TBA' : (price ? Number(price) : undefined);
+  const discountPriceValue = discountPrice ? Number(discountPrice) : undefined;
+  const buyingPriceValue = buyingPrice ? Number(buyingPrice) : undefined;
+
   const product = await Product.create({
     name,
     description,
-    broadDescription: broadDescription || "",
-    price: price || null, // could be a number or TBA (null or string)
-    discountPrice: discountPrice || null,
-    buyingPrice: buyingPrice || null,
+    detailedDescription: detailedDescription || "",
+    price: priceValue,
+    discountPrice: discountPriceValue,
+    buyingPrice: buyingPriceValue,
     category,
     subcategory,
-    brand,
-    specifications: specifications || {},
+    brand: brand || null,
+    specifications: specifications || [],
     keyFeatures: keyFeatures || [],
     colors: colors || [],
     stock: {
-      inStock: stock?.inStock || 0,
+      available: stock?.available || 0,
       defective: stock?.defective || 0,
       servicing: stock?.servicing || 0,
       sold: stock?.sold || 0,
       incoming: stock?.incoming || 0,
     },
     images: req.body.images || req.files?.map(file => file.path) || [],
+    featured: featured || false,
+    isActive: isActive === undefined ? true : isActive,
   });
 
   res.status(201).json({
@@ -66,28 +137,35 @@ export const createProduct = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 export const updateProduct = asyncHandler(async (req, res) => {
+  console.log(`Received product update request for ID: ${req.params.id} with body:`);
+  console.log(JSON.stringify(req.body, null, 2));
+
   const { id } = req.params;
 
-  // Prevent changing category/subcategory relationship
-  if (req.body.subcategory && req.body.category) {
-    const subcat = await mongoose.model('Subcategory').findById(req.body.subcategory);
-    if (!subcat || subcat.category.toString() !== req.body.category) {
-      throw new ErrorResponse('Subcategory does not belong to this category', 400);
-    }
-  }
-
-  const product = await Product.findByIdAndUpdate(id, req.body, {
-    new: true,
-    runValidators: true
-  });
+  let product = await Product.findById(id);
 
   if (!product) {
     throw new ErrorResponse('Product not found', 404);
   }
 
+  // Manually update the fields from the request body
+  // This allows Mongoose `save` hooks and validators to run correctly
+  Object.assign(product, req.body);
+
+  // Handle potential empty strings for prices from the form
+  if (req.body.price === '' || req.body.price === null) {
+    product.price = undefined; // Let required validator catch it
+  }
+  if (req.body.discountPrice === '' || req.body.discountPrice === null) {
+    product.discountPrice = undefined; // Allow it to be unset
+  }
+
+  // Save the updated document. This will trigger the schema validators correctly.
+  const updatedProduct = await product.save();
+
   res.json({
     success: true,
-    data: product
+    data: updatedProduct
   });
 });
 
