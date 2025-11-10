@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 import categoryRouter from './routes/categoryRoutes.js';
+import subcategoryRouter from './routes/subcategoryRoutes.js';
 import authRouter from './routes/authRoutes.js';
 import adminProductRouter from './routes/adminProductRoutes.js';
 import productRouter from './routes/productRoutes.js';
@@ -47,6 +48,7 @@ app.use(cookieParser());
 app.use(morgan('dev'));  
 
 app.use('/api/categories', categoryRouter);
+app.use('/api/subcategories', subcategoryRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin/products', adminProductRouter);
 app.use('/api/products', productRouter);
