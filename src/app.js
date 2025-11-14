@@ -52,6 +52,9 @@ const corsOptions = {
 // Apply CORS globally
 app.use(cors(corsOptions));
 
+// Apply Helmet for security headers
+app.use(helmet());
+
 // Preflight (OPTIONS) for all routes
 // app.options("*", cors(corsOptions));
 

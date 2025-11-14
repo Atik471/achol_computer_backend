@@ -1,12 +1,12 @@
 import Category from '../models/Category.js';
 import Subcategory from '../models/Subcategory.js';
+import asyncHandler from '../middlewares/asyncHandler.js';
 import ErrorResponse from '../utils/errorResponse.js';
 
 // @desc    Create new category
 // @route   POST /api/categories
-export const createCategory = async (req, res, next) => {
-  try {
-    const { name, description, image, icon, metaTitle, metaDescription } = req.body;
+export const createCategory = asyncHandler(async (req, res, next) => {
+  const { name, description, image, icon, metaTitle, metaDescription } = req.body;
 
     // Check if category already exists
     const existingCategory = await Category.findOne({ name });
@@ -27,15 +27,11 @@ export const createCategory = async (req, res, next) => {
       success: true,
       data: category
     });
-  } catch (err) {
-    next(err);
-  }
-};
+});
 
 // @desc    Add subcategory to category (now creates a separate Subcategory doc)
 // @route   POST /api/categories/:categoryId/subcategories
-export const addSubcategory = async (req, res, next) => {
-  try {
+export const addSubcategory = asyncHandler(async (req, res, next) => {
     const { name, description, image } = req.body;
     const category = await Category.findById(req.params.categoryId);
 
@@ -69,16 +65,12 @@ export const addSubcategory = async (req, res, next) => {
       success: true,
       data: subcategory
     });
-  } catch (err) {
-    next(err);
-  }
-};
+});
 
 // @desc    Delete category
 // @route   DELETE /api/categories/:id
-export const deleteCategory = async (req, res, next) => {
-  try {
-    // Find the category
+export const deleteCategory = asyncHandler(async (req, res, next) => {
+  // Find the category
     const category = await Category.findById(req.params.id);
     if (!category) {
       return next(new ErrorResponse('Category not found', 404));
@@ -96,16 +88,12 @@ export const deleteCategory = async (req, res, next) => {
       success: true,
       data: {}
     });
-  } catch (err) {
-    next(err);
-  }
-};
+});
 
 // @desc    Delete subcategory (removes Subcategory doc and ref from Category)
 // @route   DELETE /api/categories/:categoryId/subcategories/:subcategoryId
-export const deleteSubcategory = async (req, res, next) => {
-  try {
-    const category = await Category.findById(req.params.categoryId);
+export const deleteSubcategory = asyncHandler(async (req, res, next) => {
+  const category = await Category.findById(req.params.categoryId);
     if (!category) {
       return next(new ErrorResponse('Category not found', 404));
     }
@@ -128,16 +116,12 @@ export const deleteSubcategory = async (req, res, next) => {
       success: true,
       data: {}
     });
-  } catch (err) {
-    next(err);
-  }
-};
+});
 
 // @desc    Get all categories with subcategories (populated)
 // @route   GET /api/categories
-export const getCategories = async (req, res, next) => {
-  try {
-    const categories = await Category.find({})
+export const getCategories = asyncHandler(async (req, res, next) => {
+  const categories = await Category.find({})
       .populate('subcategories')
       .select('-__v')
       .sort({ name: 1 });
@@ -147,7 +131,4 @@ export const getCategories = async (req, res, next) => {
       count: categories.length,
       data: categories
     });
-  } catch (err) {
-    next(err);
-  }
-};
+});

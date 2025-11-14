@@ -203,12 +203,7 @@ export const refreshAccessToken = async (req, res, next) => {
     }
 
     // Issue new access token
-    const newAccessToken = jwt.sign(
-      { id: user._id },
-      process.env.JWT_ACCESS_SECRET,
-      { expiresIn: "15m" } // new short-lived access token
-    );
-
+    const newAccessToken = user.generateAccessToken();
     return res.json({ accessToken: newAccessToken });
   } catch (err) {
     // Refresh token expired or invalid
