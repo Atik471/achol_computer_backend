@@ -67,11 +67,21 @@ export const logoutUser = asyncHandler(async (req, res) => {
     await user.save({ validateBeforeSave: false });
   }
 
-  res.clearCookie("refreshToken");
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
+  };
+
+  if (process.env.NODE_ENV === "production") {
+    cookieOptions.domain = ".acholcomputer.com";
+  }
+
+  res.clearCookie("refreshToken", cookieOptions);
 
   res.status(200).json({
     success: true,
-    data: {}
+    data: {},
   });
 });
 
@@ -155,9 +165,14 @@ const sendTokenResponse = (user, statusCode, res) => {
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "Lax", // Changed from 'strict' to 'Lax'
     expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
   };
+
+  // Set domain for production to allow cross-subdomain cookies
+  if (process.env.NODE_ENV === "production") {
+    cookieOptions.domain = ".acholcomputer.com";
+  }
 
   res
     .status(statusCode)
