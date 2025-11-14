@@ -24,9 +24,21 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow Postman / server-to-server
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      // If the allowedOrigin is a regex pattern string
+      if (allowedOrigin.startsWith('/') && allowedOrigin.endsWith('/')) {
+        const regex = new RegExp(allowedOrigin.slice(1, -1));
+        return regex.test(origin);
+      }
+      // Otherwise, it's a regular string
+      return allowedOrigin === origin;
+    });
+
+    if (isAllowed) {
+      callback(null, true)
     } else {
       callback(new Error("Not allowed by CORS"));
     }
