@@ -52,15 +52,18 @@ const corsOptions = {
 // Apply CORS globally
 app.use(cors(corsOptions));
 
-// Apply Helmet for security headers
-app.use(helmet());
+// Handle preflight requests explicitly
+app.options('*', cors(corsOptions));
 
-// Preflight (OPTIONS) for all routes
-// app.options("*", cors(corsOptions));
+// Apply Helmet for security headers (but allow cross-origin credentials)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+}));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
-app.use(morgan('dev'));  
+app.use(morgan('dev'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -76,7 +79,7 @@ app.use('/api/products', productRouter);
 // Global error handler - ensures CORS headers are sent with error responses
 app.use((err, req, res, next) => {
   console.error('Error:', err.message);
-  
+
   // Ensure CORS headers are sent with error responses
   const origin = req.headers.origin;
   if (origin) {
@@ -87,13 +90,13 @@ app.use((err, req, res, next) => {
       }
       return allowedOrigin === origin;
     });
-    
+
     if (isAllowed) {
       res.setHeader('Access-Control-Allow-Origin', origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
     }
   }
-  
+
   res.status(err.statusCode || 500).json({
     success: false,
     error: err.message || 'Server Error'
