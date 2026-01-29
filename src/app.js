@@ -62,10 +62,42 @@ app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(morgan('dev'));  
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api/categories', categoryRouter);
 app.use('/api/subcategories', subcategoryRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin/products', adminProductRouter);
 app.use('/api/products', productRouter);
+
+// Global error handler - ensures CORS headers are sent with error responses
+app.use((err, req, res, next) => {
+  console.error('Error:', err.message);
+  
+  // Ensure CORS headers are sent with error responses
+  const origin = req.headers.origin;
+  if (origin) {
+    const isAllowed = allowedOrigins.some(allowedOrigin => {
+      if (allowedOrigin.startsWith('/') && allowedOrigin.endsWith('/')) {
+        const regex = new RegExp(allowedOrigin.slice(1, -1));
+        return regex.test(origin);
+      }
+      return allowedOrigin === origin;
+    });
+    
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+  }
+  
+  res.status(err.statusCode || 500).json({
+    success: false,
+    error: err.message || 'Server Error'
+  });
+});
 
 export default app;
