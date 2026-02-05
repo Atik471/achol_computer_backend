@@ -51,13 +51,6 @@ const userSchema = new mongoose.Schema(
             type: String,
             maxlength: [20, "Phone number cannot exceed 20 characters"],
         },
-        sku: {
-            type: String,
-            required: true,
-            unique: true,
-            trim: true,
-            uppercase: true,
-        },
         refreshToken: {
             type: String,
         }

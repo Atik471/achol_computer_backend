@@ -7,6 +7,11 @@ import subcategoryRouter from './routes/subcategoryRoutes.js';
 import authRouter from './routes/authRoutes.js';
 import adminProductRouter from './routes/adminProductRoutes.js';
 import productRouter from './routes/productRoutes.js';
+import userRouter from './routes/userRoutes.js';
+import cartRouter from './routes/cartRoutes.js';
+import wishlistRouter from './routes/wishlistRoutes.js';
+import orderRouter from './routes/orderRoutes.js';
+import paymentRouter from './routes/paymentRoutes.js';
 import helmet from 'helmet';
 import morgan from 'morgan';
 
@@ -53,7 +58,7 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Handle preflight requests explicitly
-app.options('*', cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 
 // Apply Helmet for security headers (but allow cross-origin credentials)
 app.use(helmet({
@@ -75,6 +80,11 @@ app.use('/api/subcategories', subcategoryRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/admin/products', adminProductRouter);
 app.use('/api/products', productRouter);
+app.use('/api/users', userRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/wishlist', wishlistRouter);
+app.use('/api/orders', orderRouter);
+app.use('/api/payments', paymentRouter);
 
 // Global error handler - ensures CORS headers are sent with error responses
 app.use((err, req, res, next) => {
@@ -99,7 +109,7 @@ app.use((err, req, res, next) => {
 
   res.status(err.statusCode || 500).json({
     success: false,
-    error: err.message || 'Server Error'
+    message: err.message || 'Server Error'
   });
 });
 
